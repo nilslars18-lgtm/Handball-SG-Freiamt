@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SG Freiamt PLUS – U19 App</title>
+<style>
+  :root {
+    --blue: #1d4ed8; --green: #16a34a; --orange: #f59e0b; --red: #dc2626; --grey: #9ca3af;
+    --bg: #f5f5f7; --card: #ffffff; --text: #1f2937; --muted: #6b7280; --border: #e5e7eb;
+  }
+  :root[data-theme="dark"] {
+    --bg: #111827; --card: #1f2937; --text: #f3f4f6; --muted: #9ca3af; --border: #374151;
+  }
+  :root[data-theme="dark"] input, :root[data-theme="dark"] select, :root[data-theme="dark"] textarea {
+    background: #111827; color: var(--text);
+  }
+  :root[data-theme="dark"] button.btn.secondary { background: #1e2a4a; color: #93c5fd; }
+  :root[data-theme="dark"] nav.tabs { background: var(--card); }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg);
+         color: var(--text); margin: 0; padding-bottom: 70px; transition: background 0.2s, color 0.2s; }
+  header { background: var(--blue); color: white; padding: 14px 16px; font-weight: 700;
+           display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 5;}
+  header .left { display: flex; align-items: center; gap: 8px; }
+  header button { background: rgba(255,255,255,0.15); color: white; border: none; border-radius: 6px;
+                  padding: 6px 10px; font-size: 0.8rem; }
+  .notif-badge { background: var(--red); color: white; border-radius: 999px; min-width: 20px; height: 20px;
+                 font-size: 0.72rem; display: flex; align-items: center; justify-content: center;
+                 padding: 0 5px; font-weight: 700; cursor: pointer; animation: blink 1.1s ease-in-out infinite; }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+  main { max-width: 480px; margin: 0 auto; padding: 12px; }
+  .card { background: var(--card); border-radius: 12px; padding: 14px; margin-bottom: 12px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  input, select, textarea, button.btn { width: 100%; padding: 11px; margin: 5px 0; border-radius: 8px;
+         border: 1px solid var(--border); font-size: 1rem; background: white; color: var(--text); }
+  button.btn { background: var(--blue); color: white; border: none; font-weight: 600; cursor: pointer; }
+  button.btn.secondary { background: #eef2ff; color: var(--blue); }
+  button.btn.small { width: auto; padding: 6px 10px; font-size: 0.85rem; margin: 2px 4px 2px 0; }
+  button.btn.danger { background: #fee2e2; color: var(--red); }
+  h2 { font-size: 1.05rem; margin: 4px 0 10px; }
+  h3 { font-size: 0.95rem; margin: 10px 0 6px; color: var(--muted); }
+  .muted { color: var(--muted); font-size: 0.85rem; }
+  .row { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; flex-shrink:0;}
+  .dot.aufgeboten { background: var(--green); }
+  .dot.verletzt { background: var(--orange); }
+  .dot.nicht_aufgeboten { background: var(--red); }
+  .dot.pending { background: var(--grey); }
+  .game-item { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border);
+               cursor: pointer; }
+  .game-item:last-child { border-bottom: none; }
+  .game-meta { font-size: 0.8rem; color: var(--muted); }
+  nav.tabs { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex;
+             border-top: 1px solid var(--border); z-index: 5; }
+  nav.tabs button { flex: 1; background: none; border: none; padding: 10px 4px; font-size: 0.75rem;
+                     color: var(--muted); }
+  nav.tabs button.active { color: var(--blue); font-weight: 700; }
+  .hidden { display: none !important; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+  .badge.offen { background: #dcfce7; color: #166534; }
+  .badge.geschlossen { background: #f3f4f6; color: #374151; }
+  .badge.bevorstehend { background: #fef3c7; color: #92400e; }
+  .bar-bg { background: #f0f0f0; border-radius: 6px; height: 20px; overflow: hidden; margin: 4px 0; }
+  .bar-fg { background: var(--blue); height: 100%; color: white; font-size: 0.75rem; display: flex;
+            align-items: center; padding-left: 6px; white-space: nowrap; }
+  .error { color: var(--red); font-size: 0.85rem; margin: 4px 0; }
+  .ok { color: var(--green); font-size: 0.85rem; margin: 4px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  td, th { padding: 6px 4px; text-align: left; border-bottom: 1px solid var(--border); }
+  a { color: var(--blue); }
+  .cal-day { padding: 6px 2px; border-radius: 6px; position: relative; }
+  .cal-day.has-game { background: #eef2ff; cursor: pointer; }
+  :root[data-theme="dark"] .cal-day.has-game { background: #1e2a4a; }
+  .cal-day.today .cal-daynum { position: relative; display: inline-block; }
+  .today-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); display: block;
+               margin: 2px auto 0; }
+  .card-swipe { touch-action: pan-y; }
+  .swipe-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .swipe-nav button.btn.small { margin: 0; }
+  .swipe-pos { font-size: 0.8rem; color: var(--muted); }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 20; display: flex;
+                   align-items: flex-end; justify-content: center; }
+  .modal { background: var(--card); color: var(--text); width: 100%; max-width: 480px; max-height: 90vh;
+           overflow-y: auto; border-radius: 16px 16px 0 0; padding: 16px; }
+  @media (min-width: 600px) { .modal-overlay { align-items: center; } .modal { border-radius: 16px; } }
+  textarea { min-height: 90px; font-family: inherit; resize: vertical; }
+  .badge.beschwerde { background: #fef3c7; color: #92400e; }
+  .badge.angenommen { background: #dcfce7; color: #166534; }
+  .badge.abgelehnt { background: #fee2e2; color: #991b1b; }
+  .badge.gebuehr { background: #e0e7ff; color: #3730a3; }
+  .quote { border-left: 3px solid var(--border); padding: 4px 10px; margin: 6px 0; white-space: pre-wrap; }
+  .warn { background: #fef3c7; color: #92400e; border-radius: 8px; padding: 8px 10px; font-size: 0.85rem; margin: 8px 0; }
+</style>
+</head>
+<body>
+
+<div id="login-screen" class="hidden">
+  <header>🤾 SG Freiamt PLUS</header>
+  <main>
+    <div class="card">
+      <h2>Anmelden</h2>
+      <input id="login-email" type="email" placeholder="E-Mail">
+      <input id="login-password" type="password" placeholder="Passwort">
+      <button class="btn" onclick="login()">Einloggen</button>
+      <div id="login-error" class="error"></div>
+    </div>
+  </main>
+</div>
+
+<div id="app-screen" class="hidden">
+  <header>
+    <span class="left">
+      <span id="notif-badge" class="notif-badge hidden" onclick="goToBadge()">0</span>
+      <span id="header-title">🤾 SG Freiamt PLUS</span>
+    </span>
+    <span><button onclick="openFeedbackModal()">💬 Feedback</button> <button onclick="logout()">Abmelden</button></span>
+  </header>
+  <main id="content"></main>
+  <nav class="tabs" id="tabs"></nav>
+</div>
+
+<script>
+const API = "";
+let state = { token: localStorage.getItem("token") || null, me: null, tab: "start", selectedGame: null,
+              spieleView: "liste", calMonth: new Date().getMonth(), calYear: new Date().getFullYear(),
+              selectedFinePlayer: null, theme: localStorage.getItem("theme") || "light", cardIndex: null };
+
+async function api(path, opts = {}) {
+  const headers = opts.headers || {};
+  if (state.token) headers["Authorization"] = "Bearer " + state.token;
+  if (opts.body && !(opts.body instanceof FormData) && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+  const res = await fetch(API + path, { ...opts, headers });
+  let data = null;
+  try { data = await res.json(); } catch (e) { /* leer */ }
+  if (!res.ok) {
+    const msg = (data && data.detail) ? data.detail : ("Fehler " + res.status);
+    throw new Error(msg);
+  }
+  return data;
+}
+
+async function login() {
+  const email = document.getElementById("login-email").value;
+  const password = document.getElementById("login-password").value;
+  const errEl = document.getElementById("login-error");
+  errEl.textContent = "";
+  try {
+    const body = new URLSearchParams();
+    body.append("username", email);
+    body.append("password", password);
+    const res = await fetch("/auth/login", { method: "POST", body });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Login fehlgeschlagen");
+    state.token = data.access_token;
+    localStorage.setItem("token", state.token);
+    await boot();
+  } catch (e) {
+    errEl.textContent = e.message;
+  }
+}
+
+function logout() {
+  localStorage.removeItem("token");
+  state.token = null;
+  state.me = null;
+  showLogin();
+}
+
+function showLogin() {
+  document.getElementById("app-screen").classList.add("hidden");
+  document.getElementById("login-screen").classList.remove("hidden");
+}
+
+async function boot() {
+  applyTheme();
+  if (!state.token) { showLogin(); return; }
+  try {
+    state.me = await api("/users/me");
+  } catch (e) {
+    logout();
+    return;
+  }
+  document.getElementById("login-screen").classList.add("hidden");
+  document.getElementById("app-screen").classList.remove("hidden");
+  document.getElementById("header-title").textContent = "🤾 Hallo " + state.me.name;
+  renderTabs();
+  renderTab();
+  loadNotifications();
+  if (!window._notifInterval) {
+    window._notifInterval = setInterval(loadNotifications, 45000);
+  }
+}
+
+function applyTheme() {
+  document.documentElement.setAttribute("data-theme", state.theme);
+}
+
+function toggleTheme() {
+  state.theme = state.theme === "dark" ? "light" : "dark";
+  localStorage.setItem("theme", state.theme);
+  applyTheme();
+  if (state.tab === "einstellungen") renderTab();
+}
+
+async function loadNotifications() {
+  if (!state.token || !state.me) return;
+  try {
+    const n = await api("/notifications/count");
+    state.notif = n;
+    const badge = document.getElementById("notif-badge");
+    if (n.total > 0) {
+      badge.textContent = n.total;
+      badge.classList.remove("hidden");
+    } else {
+      badge.classList.add("hidden");
+    }
+  } catch (e) { /* still not logged in oder Fehler - ignorieren */ }
+}
+
+function goToBadge() {
+  const n = state.notif || {};
+  state.selectedGame = null; state.selectedFinePlayer = null;
+  state.tab = (n.complaints_open > 0 || n.fines_open > 0) ? "bussen" : (n.polls_open > 0 ? "spiele" : "start");
+  renderTabs(); renderTab();
+}
+
+function esc(v) {
+  return String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function openModal(html) {
+  closeModal();
+  const o = document.createElement("div");
+  o.className = "modal-overlay"; o.id = "modal-overlay";
+  o.onclick = (e) => { if (e.target === o) closeModal(); };
+  o.innerHTML = `<div class="modal">${html}</div>`;
+  document.body.appendChild(o);
+}
+function closeModal() { const o = document.getElementById("modal-overlay"); if (o) o.remove(); }
+
+function goToEinstellungen() {
+  state.tab = "einstellungen"; state.selectedGame = null; state.selectedFinePlayer = null;
+  renderTabs(); renderTab();
+}
+
+function isAdmin() { return state.me && state.me.base_role === "admin"; }
+function isBussenchef() { return state.me && (isAdmin() || state.me.is_bussenchef); }
+function isHarzchef() { return state.me && (isAdmin() || state.me.is_harzchef); }
+
+function renderTabs() {
+  const tabs = [{ id: "start", label: "🏠 Start" }, { id: "spiele", label: "📅 Spiele" }];
+  if (isAdmin()) tabs.push({ id: "verwaltung", label: "⚙️ Verwaltung" });
+  tabs.push({ id: "bussen", label: "💰 Bussen" });
+  if (isHarzchef()) tabs.push({ id: "harz", label: "🧴 Harz" });
+  tabs.push({ id: "einstellungen", label: "🔧 Mehr" });
+  const nav = document.getElementById("tabs");
+  nav.innerHTML = "";
+  tabs.forEach(t => {
+    const b = document.createElement("button");
+    b.textContent = t.label;
+    b.className = state.tab === t.id ? "active" : "";
+    b.onclick = () => { state.tab = t.id; state.selectedGame = null; state.selectedFinePlayer = null; renderTabs(); renderTab(); };
+    nav.appendChild(b);
+  });
+}
+
+function renderTab() {
+  const c = document.getElementById("content");
+  c.innerHTML = '<p class="muted">Lade...</p>';
+  if (state.tab === "start") return renderStart();
+  if (state.tab === "spiele") return renderSpiele();
+  if (state.tab === "verwaltung") return renderVerwaltung();
+  if (state.tab === "bussen") return renderBussen();
+  if (state.tab === "harz") return renderHarz();
+  if (state.tab === "einstellungen") return renderEinstellungen();
+}
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("de-CH", { weekday: "short", day: "2-digit", month: "2-digit" }) +
+         " " + d.toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" });
+}
+
+// ---------------------------------------------------------------------
+// Tab: Start (Startseite)
+// ---------------------------------------------------------------------
+async function renderStart() {
+  const c = document.getElementById("content");
+  try {
+    const data = await api("/games/next");
+    if (!data.game) {
+      c.innerHTML = '<div class="card"><h2>🏠 Willkommen</h2><p class="muted">Kein anstehendes Spiel gefunden. Der Trainer muss zuerst den Spielplan importieren.</p></div>';
+      return;
+    }
+    const g = data.game;
+    let html = `<div class="card">
+      <h3>Nächstes Spiel</h3>
+      <h2>${g.is_home ? "🏠 Heimspiel" : "🚌 Auswärtsspiel"} gegen ${g.opponent}</h2>
+      <p class="muted">${fmtDate(g.start_time)}${g.location_name ? " · " + g.location_name : ""}</p>
+      ${g.maps_link ? `<a href="${g.maps_link}" target="_blank">📍 Route zur Halle</a>` : ""}
+      <h3 style="margin-top:14px">Kannst du spielen?</h3>
+      ${availabilityButtonsHtml(g)}
+      <button class="btn secondary" style="margin-top:8px" onclick="openGame(${g.id})">Details öffnen ›</button>
+    </div>`;
+    c.innerHTML = html;
+  } catch (e) {
+    c.innerHTML = `<div class="card error">${e.message}</div>`;
+  }
+}
+
+function availabilityButtonsHtml(g) {
+  const opts = [
+    { v: "kann_spielen", label: "✅ Kann spielen" },
+    { v: "verletzt", label: "🟠 Verletzt" },
+    { v: "abwesend", label: "🔴 Abwesend" },
+  ];
+  return opts.map(o => {
+    const active = g.my_availability_status === o.v;
+    return `<button class="btn ${active ? "" : "secondary"}" onclick="setAvailability(${g.id}, '${o.v}')">${active ? "✓ " : ""}${o.label}</button>`;
+  }).join("");
+}
+
+async function setAvailability(gameId, status) {
+  try {
+    await api(`/games/${gameId}/availability`, { method: "PUT", body: JSON.stringify({ status }) });
+    renderTab();
+  } catch (e) { alert(e.message); }
+}
+
+// ---------------------------------------------------------------------
+// Tab: Spiele
+// ---------------------------------------------------------------------
+async function renderSpiele() {
+  const c = document.getElementById("content");
+  if (state.selectedGame) return renderGameDetail(state.selectedGame);
+
+  const toggleHtml = `<div class="card" style="padding:8px">
+    <div style="display:flex;gap:8px">
+      <button class="btn ${state.spieleView === "liste" ? "" : "secondary"} small" style="flex:1" onclick="state.spieleView='liste';renderTab()">📋 Liste</button>
+      <button class="btn ${state.spieleView === "karten" ? "" : "secondary"} small" style="flex:1" onclick="state.spieleView='karten';renderTab()">🎴 Karten</button>
+      <button class="btn ${state.spieleView === "kalender" ? "" : "secondary"} small" style="flex:1" onclick="state.spieleView='kalender';renderTab()">🗓️ Kalender</button>
+    </div>
+  </div>`;
+
+  if (state.spieleView === "kalender") {
+    c.innerHTML = toggleHtml + '<div id="cal-box"></div>';
+    return renderCalendar();
+  }
+
+  if (state.spieleView === "karten") {
+    c.innerHTML = toggleHtml + '<div id="karten-box"></div>';
+    return renderKarten();
+  }
+
+  try {
+    const games = await api("/games?upcoming_only=false");
+    let html = toggleHtml;
+    if (games.length === 0) {
+      html += '<div class="card"><p class="muted">Noch keine Spiele importiert.</p></div>';
+      c.innerHTML = html;
+      return;
+    }
+    html += '<div class="card"><h2>Spielplan</h2>';
+    games.forEach(g => {
+      html += `<div class="game-item" onclick="openGame(${g.id})">
+        <span class="dot ${g.my_aufgebot_status}"></span>
+        <div style="flex:1">
+          <div>${g.is_home ? "🏠" : "🚌"} ${g.opponent}</div>
+          <div class="game-meta">${fmtDate(g.start_time)} · ${g.location_name || ""}</div>
+        </div>
+      </div>`;
+    });
+    html += "</div>";
+    c.innerHTML = html;
+  } catch (e) {
+    c.innerHTML = `<div class="card error">${e.message}</div>`;
+  }
+}
+
+async function renderCalendar() {
+  const box = document.getElementById("cal-box");
+  if (!box) return;
+  try {
+    const games = await api("/games?upcoming_only=false");
+    const byDay = {};
+    games.forEach(g => {
+      const d = new Date(g.start_time);
+      const key = d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+      (byDay[key] = byDay[key] || []).push(g);
+    });
+
+    const y = state.calYear, m = state.calMonth;
+    const first = new Date(y, m, 1);
+    const startWeekday = (first.getDay() + 6) % 7; // Montag=0
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const monthName = first.toLocaleDateString("de-CH", { month: "long", year: "numeric" });
+
+    let html = `<div class="card">
+      <div class="row">
+        <button class="btn small secondary" onclick="changeMonth(-1)">‹</button>
+        <strong>${monthName}</strong>
+        <button class="btn small secondary" onclick="changeMonth(1)">›</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:10px;text-align:center;font-size:0.75rem">
+        <div class="muted">Mo</div><div class="muted">Di</div><div class="muted">Mi</div><div class="muted">Do</div>
+        <div class="muted">Fr</div><div class="muted">Sa</div><div class="muted">So</div>`;
+
+    const now = new Date();
+    const isCurrentMonth = now.getFullYear() === y && now.getMonth() === m;
+    const todayDate = now.getDate();
+
+    for (let i = 0; i < startWeekday; i++) html += "<div></div>";
+    for (let day = 1; day <= daysInMonth; day++) {
+      const key = y + "-" + m + "-" + day;
+      const dayGames = byDay[key];
+      const isToday = isCurrentMonth && day === todayDate;
+      const cls = "cal-day" + (dayGames && dayGames.length ? " has-game" : "") + (isToday ? " today" : "");
+      const click = dayGames && dayGames.length ? ` onclick="openGame(${dayGames[0].id})"` : "";
+      html += `<div class="${cls}"${click}>
+          <span class="cal-daynum">${day}</span>
+          ${dayGames && dayGames.length ? `<span class="dot ${dayGames[0].my_aufgebot_status}" style="margin:2px 0 0"></span>` : ""}
+          ${isToday ? '<span class="today-dot" title="Heute"></span>' : ""}
+        </div>`;
+    }
+    html += "</div></div>";
+    box.innerHTML = html;
+  } catch (e) {
+    box.innerHTML = `<div class="card error">${e.message}</div>`;
+  }
+}
+
+function changeMonth(delta) {
+  state.calMonth += delta;
+  if (state.calMonth < 0) { state.calMonth = 11; state.calYear--; }
+  if (state.calMonth > 11) { state.calMonth = 0; state.calYear++; }
+  renderCalendar();
+}
+
+function openGame(id) { state.tab = "spiele"; state.selectedGame = id; state.spieleView = "liste"; renderTabs(); renderTab(); }
+function backToList() { state.selectedGame = null; renderTab(); }
+
+// ---------------------------------------------------------------------
+// Spiele: Karten-Ansicht (swipebar, wie die Startseite, aber für alle Spiele)
+// ---------------------------------------------------------------------
+let _kartenGames = [];
+
+async function renderKarten() {
+  const box = document.getElementById("karten-box");
+  if (!box) return;
+  try {
+    const games = await api("/games?upcoming_only=false");
+    _kartenGames = games;
+    if (!games.length) {
+      box.innerHTML = '<div class="card"><p class="muted">Noch keine Spiele importiert.</p></div>';
+      return;
+    }
+    if (state.cardIndex === null) {
+      const now = new Date();
+      let idx = games.findIndex(g => new Date(g.start_time) >= now);
+      if (idx === -1) idx = games.length - 1; // alle Spiele sind vorbei -> letztes zeigen
+      state.cardIndex = idx;
+    }
+    if (state.cardIndex < 0) state.cardIndex = 0;
+    if (state.cardIndex > games.length - 1) state.cardIndex = games.length - 1;
+    renderKartenCard();
+  } catch (e) {
+    box.innerHTML = `<div class="card error">${e.message}</div>`;
+  }
+}
+
+function renderKartenCard() {
+  const box = document.getElementById("karten-box");
+  if (!box || !_kartenGames.length) return;
+  const g = _kartenGames[state.cardIndex];
+  const atStart = state.cardIndex === 0;
+  const atEnd = state.cardIndex === _kartenGames.length - 1;
+
+  const html = `
+    <div class="swipe-nav">
+      <button class="btn small secondary" ${atStart ? "disabled" : ""} onclick="swipeCard(-1)">‹ Früher</button>
+      <span class="swipe-pos">${state.cardIndex + 1} / ${_kartenGames.length}</span>
+      <button class="btn small secondary" ${atEnd ? "disabled" : ""} onclick="swipeCard(1)">Später ›</button>
+    </div>
+    <div class="card card-swipe" id="karten-card">
+      <h3>${new Date(g.start_time) < new Date() ? "Vergangenes Spiel" : "Kommendes Spiel"}</h3>
+      <h2>${g.is_home ? "🏠 Heimspiel" : "🚌 Auswärtsspiel"} gegen ${g.opponent}</h2>
+      <p class="muted">${fmtDate(g.start_time)}${g.location_name ? " · " + g.location_name : ""}</p>
+      ${g.maps_link ? `<a href="${g.maps_link}" target="_blank">📍 Route zur Halle</a>` : ""}
+      <h3 style="margin-top:14px">Kannst du spielen?</h3>
+      ${availabilityButtonsHtml(g)}
+      <button class="btn secondary" style="margin-top:8px" onclick="openGame(${g.id})">Details öffnen ›</button>
+    </div>`;
+  box.innerHTML = html;
+  attachSwipeHandlers();
+}
+
+function swipeCard(delta) {
+  state.cardIndex += delta;
+  if (state.cardIndex < 0) state.cardIndex = 0;
+  if (state.cardIndex > _kartenGames.length - 1) state.cardIndex = _kartenGames.length - 1;
+  renderKartenCard();
+}
+
+function attachSwipeHandlers() {
+  const el = document.getElementById("karten-card");
+  if (!el) return;
+  let startX = null, startY = null;
+  el.addEventListener("touchstart", (e) => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+  el.addEventListener("touchend", (e) => {
+    if (startX === null) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+      // nach rechts wischen (dx > 0) -> ein Spiel weiter in die Zukunft
+      // nach links wischen (dx < 0) -> ein Spiel zurück
+      swipeCard(dx > 0 ? 1 : -1);
+    }
+    startX = null; startY = null;
+  }, { passive: true });
+}
+
+async function renderGameDetail(id) {
+  const c = document.getElementById("content");
+  try {
+    const g = await api(`/games/${id}`);
+    const statusLabel = { aufgeboten: "✅ Aufgeboten", verletzt: "🟠 Verletzt (Bank)",
+                           nicht_aufgeboten: "❌ Nicht aufgeboten", pending: "⏳ Aufgebot folgt" }[g.my_aufgebot_status];
+
+    let html = `<button class="btn secondary small" onclick="backToList()">‹ Zurück</button>
+      <div class="card">
+        <h2>${g.is_home ? "🏠 Heimspiel" : "🚌 Auswärtsspiel"} gegen ${g.opponent}</h2>
+        <p class="muted">${fmtDate(g.start_time)}${g.location_name ? " · " + g.location_name : ""}</p>
+        <p><span class="dot ${g.my_aufgebot_status}"></span>${statusLabel}</p>
+        ${g.maps_link ? `<a href="${g.maps_link}" target="_blank">📍 Route zur Halle öffnen</a>` : ""}
+        <div id="anfahrt-box" style="margin-top:10px"></div>
+        <button class="btn secondary" onclick="loadAnfahrt(${g.id})">🚗 Abfahrtszeit berechnen</button>
+        <h3 style="margin-top:14px">Kannst du spielen?</h3>
+        ${availabilityButtonsHtml(g)}
+      </div>`;
+
+    if (g.poll) {
+      html += `<div class="card" id="poll-box"><h2>🍕 Essen gehen</h2>${renderPollStub(g)}</div>`;
+    }
+
+    c.innerHTML = html;
+    if (g.poll) loadPoll(g);
+  } catch (e) {
+    c.innerHTML = `<div class="card error">${e.message}</div>`;
+  }
+}
+
+function renderPollStub(g) {
+  const badge = `<span class="badge ${g.poll.status}">${g.poll.status}</span>`;
+  if (g.poll.status === "bevorstehend") {
+    return `${badge}<p class="muted">Öffnet am ${fmtDate(g.poll.opens_at)}</p>`;
+  }
+  return `${badge}<div id="poll-inner"><p class="muted">Lade...</p></div>`;
+}
+
+async function loadAnfahrt(gameId) {
+  const box = document.getElementById("anfahrt-box");
+  box.innerHTML = '<p class="muted">Berechne...</p>';
+  try {
+    const info = await api(`/games/${gameId}/anfahrt`);
+    if (info.note) {
+      box.innerHTML = `<p class="muted">${info.note}</p>`;
+    } else {
+      box.innerHTML = `<p><strong>Abfahrt: ${fmtDate(info.departure_time)}</strong><br>
+        <span class="muted">Fahrzeit ${info.duration_text}, ${info.distance_text} · Ankunft geplant ${fmtDate(info.arrival_target)}</span></p>`;
+    }
+  } catch (e) {
+    box.innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function loadPoll(g) {
+  if (g.poll.status === "bevorstehend") return;
+  const inner = document.getElementById("poll-inner");
+  if (!inner) return;
+
+  if (g.poll.status === "offen") {
+    try {
+      const options = await api(`/games/${g.id}/poll/options`);
+      let html = "<p class='muted'>Deine Stimme ist anonym, du kannst sie ändern solange die Umfrage offen ist.</p>";
+      options.forEach(o => {
+        const active = g.poll.my_vote_option_id === o.id;
+        html += `<button class="btn ${active ? "" : "secondary"}" onclick="vote(${g.id}, ${o.id})">
+          ${active ? "✓ " : ""}${o.label}</button>`;
+      });
+      inner.innerHTML = html;
+    } catch (e) {
+      inner.innerHTML = `<p class="error">${e.message}</p>`;
+    }
+    return;
+  }
+
+  // geschlossen
+  if (!g.poll.results_visible) {
+    inner.innerHTML = `<p class="muted">Ergebnisse werden nach dem Spiel sichtbar.</p>`;
+    return;
+  }
+  try {
+    const results = await api(`/games/${g.id}/poll/results`);
+    let html = `<p class="muted">${results.total_votes} Stimmen</p>`;
+    results.results.forEach(r => {
+      html += `<div>${r.label} (${r.votes})</div>
+        <div class="bar-bg"><div class="bar-fg" style="width:${r.percentage}%">${r.percentage}%</div></div>`;
+    });
+    if (results.mitkommende.length) {
+      html += `<h3>Kommt mit (${results.mitkommende.length})</h3><p>${results.mitkommende.join(", ")}</p>`;
+    }
+    html += `<button class="btn secondary" onclick="loadRestaurants(${g.id})">🍽️ Restaurantvorschläge</button>
+      <div id="restaurant-box"></div>`;
+    inner.innerHTML = html;
+  } catch (e) {
+    inner.innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function vote(gameId, optionId) {
+  try {
+    await api(`/games/${gameId}/poll/vote`, { method: "POST", body: JSON.stringify({ option_id: optionId }) });
+    openGame(gameId); // neu laden
+    loadNotifications();
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+async function loadRestaurants(gameId) {
+  const box = document.getElementById("restaurant-box");
+  box.innerHTML = '<p class="muted">Suche...</p>';
+  try {
+    const data = await api(`/games/${gameId}/poll/restaurants`);
+    if (!data.suggestions.length) {
+      box.innerHTML = `<p class="muted">${data.note || "Keine Vorschläge gefunden."}</p>`;
+      return;
+    }
+    let html = "";
+    data.suggestions.forEach(s => {
+      html += `<p><a href="${s.maps_link}" target="_blank">${s.name}</a><br>
+        <span class="muted">${s.address || ""}</span></p>`;
+    });
+    box.innerHTML = html;
+  } catch (e) {
+    box.innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+// ---------------------------------------------------------------------
+// Tab: Verwaltung (Admin)
+// ---------------------------------------------------------------------
+async function renderVerwaltung() {
+  const c = document.getElementById("content");
+  let html = `
+    <div class="card">
+      <h2>📥 Spielplan importieren</h2>
+      <input type="file" id="ics-file" accept=".ics">
+      <button class="btn" onclick="importIcs()">Importieren</button>
+      <div id="import-result"></div>
+    </div>
+    <div class="card">
+      <h2>🧑‍🤝‍🧑 Spieler verwalten</h2>
+      <input id="new-name" placeholder="Name">
+      <input id="new-email" type="email" placeholder="E-Mail">
+      <input id="new-password" type="password" placeholder="Passwort">
+      <button class="btn" onclick="registerPlayer()">Spieler anlegen</button>
+      <div id="register-result"></div>
+      <div id="users-list"></div>
+    </div>
+    <div class="card">
+      <h2>📋 Aufgebot setzen</h2>
+      <select id="aufgebot-game-select" onchange="loadAufgebotTable()"></select>
+      <div id="aufgebot-table"></div>
+    </div>`;
+  c.innerHTML = html;
+  loadUsersList();
+  loadAufgebotGameOptions();
+}
+
+async function importIcs() {
+  const fileInput = document.getElementById("ics-file");
+  const resultEl = document.getElementById("import-result");
+  if (!fileInput.files.length) { resultEl.innerHTML = '<p class="error">Bitte Datei wählen.</p>'; return; }
+  const fd = new FormData();
+  fd.append("file", fileInput.files[0]);
+  resultEl.innerHTML = '<p class="muted">Importiere...</p>';
+  try {
+    const res = await api("/games/import", { method: "POST", body: fd });
+    resultEl.innerHTML = `<p class="ok">${res.imported} importiert, ${res.skipped_existing} bereits vorhanden.</p>`;
+    loadAufgebotGameOptions();
+  } catch (e) {
+    resultEl.innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function registerPlayer() {
+  const name = document.getElementById("new-name").value;
+  const email = document.getElementById("new-email").value;
+  const password = document.getElementById("new-password").value;
+  const resultEl = document.getElementById("register-result");
+  try {
+    await api("/auth/register", { method: "POST", body: JSON.stringify({ name, email, password }) });
+    resultEl.innerHTML = `<p class="ok">Angelegt.</p>`;
+    loadUsersList();
+  } catch (e) {
+    resultEl.innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function loadUsersList() {
+  const el = document.getElementById("users-list");
+  try {
+    const users = await api("/users");
+    let html = "<table><tr><th>Name</th><th>Rollen</th></tr>";
+    users.forEach(u => {
+      const roles = [];
+      if (u.base_role === "admin") roles.push("Admin");
+      if (u.is_captain) roles.push("Captain");
+      if (u.is_bussenchef) roles.push("Bussenchef");
+      if (u.is_harzchef) roles.push("Harzchef");
+      html += `<tr><td>${u.name}</td><td>
+        ${roles.join(", ") || "Spieler"}
+        ${u.base_role !== "admin" ? `<br><button class="btn small secondary" onclick="toggleRole(${u.id},'is_captain',${!u.is_captain})">Captain ${u.is_captain ? "-" : "+"}</button>
+        <button class="btn small secondary" onclick="toggleRole(${u.id},'is_bussenchef',${!u.is_bussenchef})">Bussenchef ${u.is_bussenchef ? "-" : "+"}</button>
+        <button class="btn small secondary" onclick="toggleRole(${u.id},'is_harzchef',${!u.is_harzchef})">Harzchef ${u.is_harzchef ? "-" : "+"}</button>` : ""}
+      </td></tr>`;
+    });
+    html += "</table>";
+    el.innerHTML = html;
+  } catch (e) {
+    el.innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function toggleRole(userId, field, value) {
+  try {
+    await api(`/users/${userId}/roles`, { method: "PATCH", body: JSON.stringify({ [field]: value }) });
+    loadUsersList();
+  } catch (e) { alert(e.message); }
+}
+
+async function loadAufgebotGameOptions() {
+  const sel = document.getElementById("aufgebot-game-select");
+  if (!sel) return;
+  try {
+    const games = await api("/games?upcoming_only=true");
+    sel.innerHTML = games.map(g => `<option value="${g.id}">${fmtDate(g.start_time)} – ${g.opponent}</option>`).join("");
+    if (games.length) loadAufgebotTable();
+  } catch (e) { /* ignore */ }
+}
+
+async function loadAufgebotTable() {
+  const sel = document.getElementById("aufgebot-game-select");
+  const el = document.getElementById("aufgebot-table");
+  if (!sel || !sel.value) { el.innerHTML = ""; return; }
+  const gameId = sel.value;
+  try {
+    const players = await api(`/games/${gameId}/aufgebot`);
+    let html = "<table><tr><th>Spieler</th><th>Status</th><th></th></tr>";
+    players.forEach(p => {
+      html += `<tr><td>${p.name}</td><td><span class="dot ${p.status}"></span>${p.status}</td>
+        <td>
+          <button class="btn small secondary" onclick="setAufgebot(${gameId},${p.user_id},'aufgeboten')">✅</button>
+          <button class="btn small secondary" onclick="setAufgebot(${gameId},${p.user_id},'verletzt')">🟠</button>
+          <button class="btn small secondary" onclick="setAufgebot(${gameId},${p.user_id},'nicht_aufgeboten')">❌</button>
+        </td></tr>`;
+    });
+    html += "</table>";
+    el.innerHTML = html;
+  } catch (e) {
+    el.innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function setAufgebot(gameId, userId, status) {
+  try {
+    await api(`/games/${gameId}/aufgebot/${userId}`, { method: "PUT", body: JSON.stringify({ status }) });
+    loadAufgebotTable();
+  } catch (e) { alert(e.message); }
+}
+
+// ---------------------------------------------------------------------
+// Tab: Bussen
+// ---------------------------------------------------------------------
+async function renderBussen() {
+  const c = document.getElementById("content");
+  if (state.selectedFinePlayer) return renderFinePlayerDetail(state.selectedFinePlayer);
+
+  let html = `
+    <div class="card">
+      <h2>🧾 Mein Bussenkonto</h2>
+      <div id="my-fines" class="muted">Lade...</div>
+    </div>
+    <div class="card">
+      <h2>📨 Meine Beschwerden</h2>
+      <div id="my-complaints" class="muted">Lade...</div>
+    </div>`;
+  loadMyFines();
+  if (!isBussenchef()) { c.innerHTML = html; return; }
+  html += `
+    <div class="card" id="complaint-inbox-card">
+      <h2>📨 Beschwerden (Bussenchef)</h2>
+      <div id="complaint-inbox" class="muted">Lade...</div>
+    </div>
+    <div class="card">
+      <h2>💰 Kassenstand</h2>
+      <div id="bussen-overview" class="muted">Lade...</div>
+    </div>
+    <div class="card">
+      <h2>➕ Busse eintragen</h2>
+      <select id="fine-player"></select>
+      <input id="fine-reason" placeholder="Grund">
+      <input id="fine-amount" type="number" step="0.5" placeholder="Betrag CHF">
+      <button class="btn" onclick="createFine()">Eintragen</button>
+      <div id="fine-result"></div>
+    </div>
+    <div class="card">
+      <h2>🧑‍🤝‍🧑 Übersicht pro Spieler</h2>
+      <p class="muted">Antippen für alle Bussen dieses Spielers</p>
+      <div id="fines-by-player"></div>
+    </div>`;
+  c.innerHTML = html;
+  loadBussenOverview();
+  loadPlayersForSelect("fine-player");
+  loadFinesByPlayer();
+  loadComplaintInbox();
+}
+
+// --- Eigenes Bussenkonto + Beschwerden -------------------------------
+async function loadMyFines() {
+  const el = document.getElementById("my-fines");
+  const el2 = document.getElementById("my-complaints");
+  try {
+    const [fines, complaints] = await Promise.all([api("/fines/me"), api("/complaints/me")]);
+    state._myFines = fines;
+    const offen = fines.filter(f => f.status === "offen").reduce((a, f) => a + f.amount, 0);
+    const bez = fines.filter(f => f.status === "bezahlt").reduce((a, f) => a + f.amount, 0);
+    let html = `<p>Offen: <strong>CHF ${offen.toFixed(2)}</strong> · Bezahlt: CHF ${bez.toFixed(2)}</p>`;
+    if (!fines.length) {
+      html += `<p class="muted">Keine Bussen. 🎉</p>`;
+    } else {
+      html += "<table><tr><th>Grund</th><th>Datum</th><th>CHF</th><th></th></tr>";
+      fines.forEach(f => {
+        let action = "";
+        if (f.status === "bezahlt") action = "✅";
+        else if (f.is_complaint_fee) action = '<span class="badge gebuehr">Gebühr</span>';
+        else if (f.complaint_status === "offen") action = '<span class="badge beschwerde">Beschwerde offen</span>';
+        else if (f.complaint_status === "abgelehnt") action = '<span class="badge abgelehnt">abgelehnt</span>';
+        else action = `<button class="btn small secondary" onclick="openComplaintModal(${f.id})">Beschwerde</button>`;
+        html += `<tr><td>${esc(f.reason)}</td><td>${fmtDate(f.date)}</td><td>${f.amount.toFixed(2)}</td><td>${action}</td></tr>`;
+      });
+      html += "</table>";
+    }
+    el.innerHTML = html;
+    el2.innerHTML = complaints.length ? complaints.map(c => complaintCardHtml(c, false)).join("")
+      : '<p class="muted">Keine Beschwerden.</p>';
+  } catch (e) { el.innerHTML = `<p class="error">${esc(e.message)}</p>`; el2.innerHTML = ""; }
+}
+
+function complaintCardHtml(c, forChef) {
+  const label = { offen: "offen", angenommen: "angenommen", abgelehnt: "abgelehnt" }[c.status];
+  return `<div style="border-bottom:1px solid var(--border);padding:8px 0${forChef ? ";cursor:pointer" : ""}"
+      ${forChef ? `onclick="openDecisionModal(${c.id})"` : ""}>
+    <div class="row"><strong>${forChef ? esc(c.player_name) + ": " : ""}${esc(c.fine_reason)} (CHF ${c.fine_amount.toFixed(2)})</strong>
+      <span class="badge ${c.status === "offen" ? "beschwerde" : c.status}">${label}</span></div>
+    <div class="quote muted">${esc(c.message)}</div>
+    ${c.decision_comment ? `<div class="muted">💬 Bussenchef${c.decided_by_name ? " (" + esc(c.decided_by_name) + ")" : ""}: ${esc(c.decision_comment)}</div>` : ""}
+    ${c.status === "angenommen" ? '<div class="ok">Busse und Beschwerdegebühr wurden gelöscht.</div>' : ""}
+    ${c.status === "abgelehnt" ? `<div class="muted">Busse bleibt bestehen, Gebühr CHF ${c.fee_amount.toFixed(2)} bleibt.</div>` : ""}
+  </div>`;
+}
+
+function openComplaintModal(fineId) {
+  const f = (state._myFines || []).find(x => x.id === fineId);
+  if (!f) return;
+  openModal(`<h2>Beschwerde einreichen</h2>
+    <p><strong>${esc(f.reason)}</strong> – CHF ${f.amount.toFixed(2)} (${fmtDate(f.date)})</p>
+    <div class="warn">⚠️ Sobald du die Beschwerde einreichst, werden dir sofort <strong>CHF 5.00</strong> Beschwerdegebühr
+      aufs Konto gebucht. Wird die Beschwerde angenommen, werden die Busse und die Gebühr gelöscht. Wird sie abgelehnt,
+      bleiben beide bestehen.</div>
+    <textarea id="complaint-msg" maxlength="2000" placeholder="Warum ist die Busse nicht gerechtfertigt?"></textarea>
+    <div id="complaint-err"></div>
+    <button class="btn" onclick="submitComplaint(${fineId})">Beschwerde einreichen (CHF 5.00)</button>
+    <button class="btn secondary" onclick="closeModal()">Abbrechen</button>`);
+}
+
+async function submitComplaint(fineId) {
+  const message = document.getElementById("complaint-msg").value.trim();
+  const err = document.getElementById("complaint-err");
+  if (!message) { err.innerHTML = '<p class="error">Bitte eine Begründung eingeben.</p>'; return; }
+  try {
+    await api("/complaints", { method: "POST", body: JSON.stringify({ fine_id: fineId, message }) });
+    closeModal();
+    loadMyFines(); loadNotifications();
+  } catch (e) { err.innerHTML = `<p class="error">${esc(e.message)}</p>`; }
+}
+
+// --- Bussenchef/Admin: Beschwerde-Posteingang ------------------------
+async function loadComplaintInbox() {
+  const el = document.getElementById("complaint-inbox");
+  if (!el) return;
+  try {
+    const items = await api("/complaints");
+    state._complaints = items;
+    const open = items.filter(c => c.status === "offen").length;
+    el.innerHTML = (open ? `<p><strong>${open} offen</strong> – antippen zum Bearbeiten</p>` : '<p class="muted">Keine offenen Beschwerden.</p>')
+      + items.map(c => complaintCardHtml(c, true)).join("");
+  } catch (e) { el.innerHTML = `<p class="error">${esc(e.message)}</p>`; }
+}
+
+function openDecisionModal(id) {
+  const c = (state._complaints || []).find(x => x.id === id);
+  if (!c) return;
+  const isOpen = c.status === "offen";
+  openModal(`<h2>Beschwerde von ${esc(c.player_name)}</h2>
+    <p><strong>${esc(c.fine_reason)}</strong> – CHF ${c.fine_amount.toFixed(2)}${c.fine_date ? " (" + fmtDate(c.fine_date) + ")" : ""}</p>
+    <div class="quote">${esc(c.message)}</div>
+    <h3>Dein Kommentar</h3>
+    <textarea id="decision-comment" maxlength="2000" placeholder="Was hältst du von der Beschwerde?">${esc(c.decision_comment || "")}</textarea>
+    <div id="decision-err"></div>
+    ${isOpen ? `
+      <button class="btn" style="background:var(--green)" onclick="decideComplaint(${id},'annehmen')">✅ Annehmen (Busse + Gebühr löschen)</button>
+      <button class="btn danger" onclick="decideComplaint(${id},'ablehnen')">❌ Ablehnen (CHF ${c.fee_amount.toFixed(2)} bleiben)</button>`
+    : `<p class="muted">Status: ${esc(c.status)}</p>
+      <button class="btn" onclick="saveComplaintComment(${id})">Kommentar speichern</button>`}
+    <button class="btn secondary" onclick="closeModal()">Schliessen</button>`);
+}
+
+async function decideComplaint(id, decision) {
+  const comment = document.getElementById("decision-comment").value;
+  const err = document.getElementById("decision-err");
+  try {
+    await api(`/complaints/${id}/decision`, { method: "POST", body: JSON.stringify({ decision, comment }) });
+    closeModal();
+    renderTab(); loadNotifications();
+  } catch (e) { err.innerHTML = `<p class="error">${esc(e.message)}</p>`; }
+}
+
+async function saveComplaintComment(id) {
+  const comment = document.getElementById("decision-comment").value;
+  const err = document.getElementById("decision-err");
+  try {
+    await api(`/complaints/${id}/comment`, { method: "PUT", body: JSON.stringify({ comment }) });
+    closeModal();
+    renderTab();
+  } catch (e) { err.innerHTML = `<p class="error">${esc(e.message)}</p>`; }
+}
+
+// --- Feedback --------------------------------------------------------
+async function openFeedbackModal() {
+  let cats = ["Allgemein"];
+  try { cats = await api("/feedback/categories"); } catch (e) { /* Fallback */ }
+  openModal(`<h2>💬 Feedback zur App</h2>
+    <select id="fb-category">${cats.map(c => `<option>${esc(c)}</option>`).join("")}</select>
+    <textarea id="fb-message" maxlength="3000" placeholder="Was gefällt dir, was fehlt, was ist kaputt?"></textarea>
+    <div id="fb-result"></div>
+    <button class="btn" onclick="submitFeedback()">Senden</button>
+    <button class="btn secondary" onclick="closeModal()">Schliessen</button>`);
+}
+
+async function submitFeedback() {
+  const category = document.getElementById("fb-category").value;
+  const message = document.getElementById("fb-message").value.trim();
+  const res = document.getElementById("fb-result");
+  if (!message) { res.innerHTML = '<p class="error">Bitte etwas schreiben.</p>'; return; }
+  try {
+    const r = await api("/feedback", { method: "POST", body: JSON.stringify({ category, message }) });
+    res.innerHTML = `<p class="ok">${esc(r.message)}</p>`;
+    document.getElementById("fb-message").value = "";
+    setTimeout(closeModal, 1200);
+  } catch (e) { res.innerHTML = `<p class="error">${esc(e.message)}</p>`; }
+}
+
+async function loadFeedbackList() {
+  const el = document.getElementById("feedback-list");
+  if (!el) return;
+  try {
+    const items = await api("/feedback");
+    el.innerHTML = items.length ? items.map(f => `<div style="border-bottom:1px solid var(--border);padding:8px 0;${f.is_done ? "opacity:0.55" : ""}">
+        <div class="row"><strong>${esc(f.category)}</strong><span class="muted">${esc(f.player_name)} · ${fmtDate(f.created_at)}</span></div>
+        <div class="quote">${esc(f.message)}</div>
+        <button class="btn small secondary" onclick="toggleFeedbackDone(${f.id})">${f.is_done ? "↩︎ wieder öffnen" : "✔ erledigt"}</button>
+      </div>`).join("") : '<p class="muted">Noch kein Feedback.</p>';
+  } catch (e) { el.innerHTML = `<p class="error">${esc(e.message)}</p>`; }
+}
+
+async function toggleFeedbackDone(id) {
+  try { await api(`/feedback/${id}/done`, { method: "PATCH" }); loadFeedbackList(); } catch (e) { alert(e.message); }
+}
+
+async function loadBussenOverview() {
+  const el = document.getElementById("bussen-overview");
+  try {
+    const o = await api("/fines/overview");
+    el.innerHTML = `Offen: CHF ${o.total_offen.toFixed(2)} · Bezahlt: CHF ${o.total_bezahlt.toFixed(2)}
+      <br><strong>Kassenstand: CHF ${o.kassenstand.toFixed(2)}</strong>`;
+  } catch (e) { el.innerHTML = `<span class="error">${e.message}</span>`; }
+}
+
+async function loadPlayersForSelect(selectId) {
+  const sel = document.getElementById(selectId);
+  try {
+    const players = await api("/users/players");
+    sel.innerHTML = players.map(p => `<option value="${p.id}">${p.name}</option>`).join("");
+  } catch (e) { /* ignore */ }
+}
+
+async function createFine() {
+  const user_id = parseInt(document.getElementById("fine-player").value);
+  const reason = document.getElementById("fine-reason").value;
+  const amount = parseFloat(document.getElementById("fine-amount").value);
+  const resultEl = document.getElementById("fine-result");
+  try {
+    await api("/fines", { method: "POST", body: JSON.stringify({ user_id, reason, amount }) });
+    resultEl.innerHTML = '<p class="ok">Eingetragen.</p>';
+    loadBussenOverview(); loadFinesByPlayer();
+  } catch (e) { resultEl.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function loadFinesByPlayer() {
+  const el = document.getElementById("fines-by-player");
+  try {
+    const players = await api("/fines/by-player");
+    let html = "<table><tr><th>Spieler</th><th>Offen</th><th>Bezahlt</th></tr>";
+    players.forEach(p => {
+      html += `<tr onclick="openFinePlayer(${p.user_id})" style="cursor:pointer">
+        <td>${p.name}</td>
+        <td>${p.total_offen > 0 ? `<strong>CHF ${p.total_offen.toFixed(2)}</strong>` : "–"}</td>
+        <td>CHF ${p.total_bezahlt.toFixed(2)}</td></tr>`;
+    });
+    html += "</table>";
+    el.innerHTML = html;
+  } catch (e) { el.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+function openFinePlayer(userId) { state.selectedFinePlayer = userId; renderTab(); }
+function backToFinePlayers() { state.selectedFinePlayer = null; renderTab(); }
+
+async function renderFinePlayerDetail(userId) {
+  const c = document.getElementById("content");
+  try {
+    const fines = await api(`/fines/player/${userId}`);
+    const name = fines.length ? fines[0].player_name : "Spieler";
+    let html = `<button class="btn secondary small" onclick="backToFinePlayers()">‹ Zurück</button>
+      <div class="card"><h2>Bussen von ${name}</h2>`;
+    if (!fines.length) {
+      html += `<p class="muted">Keine Bussen.</p>`;
+    } else {
+      html += "<table><tr><th>Grund</th><th>Datum</th><th>CHF</th><th></th></tr>";
+      fines.forEach(f => {
+        const locked = f.complaint_status === "offen";
+        const tag = f.is_complaint_fee ? ' <span class="badge gebuehr">Gebühr</span>'
+          : (f.complaint_status ? ` <span class="badge ${f.complaint_status === "offen" ? "beschwerde" : f.complaint_status}">Beschwerde ${esc(f.complaint_status)}</span>` : "");
+        html += `<tr><td>${esc(f.reason)}${tag}</td><td>${fmtDate(f.date)}</td><td>${f.amount.toFixed(2)}</td>
+          <td>
+            <button class="btn small secondary" onclick="editFine(${f.id},${userId})">✏️</button>
+            ${f.status === "offen" ? (locked ? "" : `<button class="btn small secondary" onclick="payFineFromDetail(${f.id},${userId})">bezahlt</button>`) : "✅"}
+          </td></tr>`;
+      });
+      state._loadedFines = fines;
+      html += "</table>";
+    }
+    html += "</div>";
+    c.innerHTML = html;
+  } catch (e) {
+    c.innerHTML = `<div class="card error">${e.message}</div>`;
+  }
+}
+
+async function payFineFromDetail(fineId, userId) {
+  try {
+    await api(`/fines/${fineId}/pay`, { method: "PATCH" });
+    renderFinePlayerDetail(userId);
+    loadNotifications();
+  } catch (e) { alert(e.message); }
+}
+
+async function editFine(fineId, userId) {
+  const existing = (state._loadedFines || []).find(f => f.id === fineId);
+  const newReason = prompt("Grund:", existing ? existing.reason : "");
+  if (newReason === null) return;
+  const newAmountStr = prompt("Betrag (CHF):", existing ? existing.amount : "");
+  if (newAmountStr === null) return;
+  const newAmount = parseFloat(newAmountStr);
+  if (isNaN(newAmount)) { alert("Ungültiger Betrag."); return; }
+  try {
+    await api(`/fines/${fineId}`, { method: "PATCH", body: JSON.stringify({ reason: newReason, amount: newAmount }) });
+    renderFinePlayerDetail(userId);
+  } catch (e) { alert(e.message); }
+}
+
+// ---------------------------------------------------------------------
+// Tab: Harz
+// ---------------------------------------------------------------------
+async function renderHarz() {
+  const c = document.getElementById("content");
+  let html = `
+    <div class="card">
+      <h2>💰 Kassenstand (gemeinsamer Topf)</h2>
+      <div id="harz-overview" class="muted">Lade...</div>
+    </div>
+    <div class="card">
+      <h2>➕ Harz-Ausgabe eintragen</h2>
+      <input id="harz-amount" type="number" step="0.5" placeholder="Betrag CHF">
+      <input id="harz-note" placeholder="Notiz (z.B. 5 Dosen Harz)">
+      <button class="btn" onclick="createHarzExpense()">Eintragen</button>
+      <div id="harz-result"></div>
+    </div>
+    <div class="card">
+      <h2>📋 Harz-Historie</h2>
+      <div id="harz-list"></div>
+    </div>`;
+  c.innerHTML = html;
+  loadHarzOverview();
+  loadHarzList();
+}
+
+async function loadHarzOverview() {
+  const el = document.getElementById("harz-overview");
+  try {
+    const o = await api("/fines/overview");
+    el.innerHTML = `<strong>Kassenstand: CHF ${o.kassenstand.toFixed(2)}</strong>`;
+  } catch (e) { el.innerHTML = `<span class="error">${e.message}</span>`; }
+}
+
+async function createHarzExpense() {
+  const amount = parseFloat(document.getElementById("harz-amount").value);
+  const note = document.getElementById("harz-note").value;
+  const resultEl = document.getElementById("harz-result");
+  try {
+    await api("/harz-expenses", { method: "POST", body: JSON.stringify({ amount, note }) });
+    resultEl.innerHTML = '<p class="ok">Eingetragen.</p>';
+    loadHarzOverview(); loadHarzList();
+  } catch (e) { resultEl.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function loadHarzList() {
+  const el = document.getElementById("harz-list");
+  try {
+    const expenses = await api("/harz-expenses");
+    let html = "<table><tr><th>Datum</th><th>CHF</th><th>Notiz</th><th>Von</th></tr>";
+    expenses.forEach(e => {
+      html += `<tr><td>${fmtDate(e.date)}</td><td>${e.amount.toFixed(2)}</td><td>${e.note || ""}</td><td>${e.created_by_name}</td></tr>`;
+    });
+    html += "</table>";
+    el.innerHTML = html;
+  } catch (e) { el.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+// ---------------------------------------------------------------------
+// Tab: Einstellungen
+// ---------------------------------------------------------------------
+async function renderEinstellungen() {
+  const c = document.getElementById("content");
+  let html = `
+    <div class="card">
+      <h2>🎨 Darstellung</h2>
+      <div class="row">
+        <span class="muted">${state.theme === "dark" ? "Dunkler Modus" : "Heller Modus"}</span>
+        <button class="btn secondary small" onclick="toggleTheme()">${state.theme === "dark" ? "☀️ Hell" : "🌙 Dunkel"}</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>🔑 Passwort ändern</h2>
+      <input id="pw-current" type="password" placeholder="Aktuelles Passwort">
+      <input id="pw-new" type="password" placeholder="Neues Passwort">
+      <input id="pw-new2" type="password" placeholder="Neues Passwort wiederholen">
+      <button class="btn" onclick="changeOwnPassword()">Passwort ändern</button>
+      <div id="pw-result"></div>
+    </div>`;
+
+  if (isAdmin()) {
+    html += `
+    <div class="card">
+      <h2>🧑‍🤝‍🧑 Spieler verwalten</h2>
+      <p class="muted">Löschen entfernt den Spieler aus der App (Historie wie Bussen bleibt erhalten). Passwort anzeigen zeigt das zuletzt gesetzte Passwort im Klartext.</p>
+      <div id="settings-users-list"></div>
+    </div>`;
+  }
+
+  if (isAdmin()) {
+    html += `
+    <div class="card">
+      <h2>💬 Feedback der Spieler</h2>
+      <div id="feedback-list" class="muted">Lade...</div>
+    </div>`;
+  }
+
+  c.innerHTML = html;
+  if (isAdmin()) { loadEinstellungenUsers(); loadFeedbackList(); }
+}
+
+async function changeOwnPassword() {
+  const current_password = document.getElementById("pw-current").value;
+  const new_password = document.getElementById("pw-new").value;
+  const new_password2 = document.getElementById("pw-new2").value;
+  const resultEl = document.getElementById("pw-result");
+  if (!current_password || !new_password) { resultEl.innerHTML = '<p class="error">Bitte alle Felder ausfüllen.</p>'; return; }
+  if (new_password !== new_password2) { resultEl.innerHTML = '<p class="error">Neue Passwörter stimmen nicht überein.</p>'; return; }
+  try {
+    await api("/users/me/password", { method: "PUT", body: JSON.stringify({ current_password, new_password }) });
+    resultEl.innerHTML = '<p class="ok">Passwort geändert.</p>';
+    document.getElementById("pw-current").value = "";
+    document.getElementById("pw-new").value = "";
+    document.getElementById("pw-new2").value = "";
+  } catch (e) {
+    resultEl.innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function loadEinstellungenUsers() {
+  const el = document.getElementById("settings-users-list");
+  try {
+    const users = await api("/users");
+    let html = "";
+    users.forEach(u => {
+      html += `<div class="row" style="border-bottom:1px solid var(--border);padding:8px 0">
+        <span>${u.name}${u.base_role === "admin" ? " (Admin)" : ""}</span>
+        <span>
+          ${u.base_role !== "admin" ? `<button class="btn small secondary" onclick="viewPassword(${u.id})">👁 Passwort</button>
+          <button class="btn small danger" onclick="deletePlayer(${u.id},'${u.name.replace(/'/g, "")}')">🗑 Löschen</button>` : ""}
+        </span>
+      </div><div id="pw-view-${u.id}"></div>`;
+    });
+    el.innerHTML = html;
+  } catch (e) {
+    el.innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function viewPassword(userId) {
+  const box = document.getElementById(`pw-view-${userId}`);
+  box.innerHTML = '<p class="muted">Lade...</p>';
+  try {
+    const res = await api(`/users/${userId}/password`);
+    box.innerHTML = res.password
+      ? `<p class="muted">Passwort: <strong>${res.password}</strong></p>`
+      : `<p class="muted">${res.note || "Kein Passwort hinterlegt."}</p>`;
+  } catch (e) {
+    box.innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function deletePlayer(userId, name) {
+  if (!confirm(`${name} wirklich entfernen?`)) return;
+  try {
+    await api(`/users/${userId}`, { method: "DELETE" });
+    loadEinstellungenUsers();
+  } catch (e) { alert(e.message); }
+}
+
+boot();
+</script>
+</body>
+</html>

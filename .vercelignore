@@ -1,0 +1,7 @@
+*.db
+__pycache__
+.env
+scripts
+start.bat
+render.yaml
+Procfile

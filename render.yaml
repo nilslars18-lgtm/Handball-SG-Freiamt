@@ -1,0 +1,41 @@
+# Render "Blueprint" - falls du in Render "New +" -> "Blueprint" waehlst und
+# dieses Repo verbindest, liest Render diese Datei automatisch und richtet
+# den Web-Service direkt passend ein (Build-/Start-Befehl, Health-Check).
+# Die eigentlichen Geheimnisse (SECRET_KEY, DATABASE_URL von Neon,
+# GOOGLE_MAPS_API_KEY) traegst du danach manuell im Render-Dashboard unter
+# "Environment" ein - die stehen hier bewusst NICHT drin.
+services:
+  - type: web
+    name: handball-app
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: TEAM_NAME
+        value: "SG Freiamt PLUS"
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "10080"
+      - key: AUFGEBOT_DAYS_BEFORE
+        value: "7"
+      - key: ARRIVAL_BUFFER_MINUTES
+        value: "120"
+      - key: POLL_OPEN_WEEKDAY
+        value: "3"
+      - key: POLL_OPEN_HOUR
+        value: "14"
+      - key: POLL_OPEN_MINUTE
+        value: "0"
+      - key: POLL_CLOSE_MINUTES_BEFORE_GAME
+        value: "30"
+      - key: POLL_DEFAULT_OPTIONS
+        value: "Pizza,Asiatisch,Burger,Kebab,Sonstiges,komme nicht mit"
+      - key: GAME_DEFAULT_DURATION_MINUTES
+        value: "90"

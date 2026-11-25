@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -38,7 +38,8 @@ def list_aufgebot(
 
     players = (
         db.query(models.User)
-        .filter(models.User.base_role == models.BaseRole.PLAYER, models.User.is_active == True)  # noqa: E712
+        .filter(models.User.base_role == models.BaseRole.PLAYER, models.User.is_active == True,  # noqa: E712
+                ~models.User.staff.has())
         .all()
     )
     entries = {
@@ -109,10 +110,19 @@ def set_aufgebot(
         entry = models.Aufgebot(game_id=game_id, user_id=user_id)
         db.add(entry)
 
+    previous = entry.status.value if entry.status else None
     entry.status = models.AufgebotStatus(body.status)
     entry.set_at = datetime.utcnow()
     db.commit()
     db.refresh(entry)
+    if previous != body.status and game.start_time > datetime.now() - timedelta(hours=1):
+        from app.services import webpush
+        title = {"aufgeboten": "✅ Du bist aufgeboten", "verletzt": "🟠 Aufgebot: Verletzt (Bank)",
+                 "nicht_aufgeboten": "Aufgebot: diesmal nicht dabei"}.get(body.status)
+        if title:
+            kind = "Heimspiel" if game.is_home else "Auswärtsspiel" if game.is_home is False else "Spiel"
+            webpush.notify([player.id], title, f"{kind} gegen {game.opponent} · {webpush.fmt_when(game.start_time)}",
+                           f"/?open=game:{game.id}", "aufgebot", f"aufgebot-{game.id}")
 
     return schemas.AufgebotPlayerOut(
         user_id=player.id, name=player.name, status=entry.status.value, decided=True

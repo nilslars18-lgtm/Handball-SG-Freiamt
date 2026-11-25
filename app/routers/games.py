@@ -63,7 +63,8 @@ def _build_detail(db: Session, game: models.Game, user: models.User) -> schemas.
     base = _build_list_item(db, game, user)
     poll_out = None
     if game.poll:
-        now = datetime.utcnow()
+        from app.services.agenda import now_local
+        now = now_local()
         status = poll_status(game.poll, now)
         my_vote = (
             db.query(models.PollVote)
@@ -242,8 +243,14 @@ def set_my_availability(
     if entry is None:
         entry = models.Availability(game_id=game_id, user_id=current_user.id)
         db.add(entry)
+    previous = entry.status.value if entry.status else None
     entry.status = models.AvailabilityStatus(body.status)
     entry.set_at = datetime.utcnow()
+    from app.routers.activity import log_response
+    log_response(db, current_user.id, "game", game_id, body.status, previous)
+    # Erinnerungen zu diesem Spiel sind damit erledigt
+    db.query(models.Notice).filter(models.Notice.user_id == current_user.id, models.Notice.ref_kind == "game",
+                                   models.Notice.ref_id == game_id).update({"is_read": True})
     db.commit()
     db.refresh(entry)
     return schemas.AvailabilityOut(status=entry.status.value, set_at=entry.set_at)

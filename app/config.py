@@ -8,7 +8,10 @@ class Settings(BaseSettings):
     google_maps_api_key: str = ""
     access_token_expire_minutes: int = 10080  # 7 Tage
     team_name: str = "SG Freiamt PLUS"
-    complaint_fee: float = 5.0  # Gebuehr (CHF) fuer jede eingereichte Busse-Beschwerde
+    # Team-ID auf handball.ch (Matchcenter-Link .../teams/40666) - aendert jede Saison!
+    handball_team_id: int = 40666
+    handball_auto_sync: bool = True
+    push_jobs: bool = True  # automatische Push-Erinnerungen (Ämtli, Eintragen, Spielbericht)
 
     # Feature 2: Aufgebot
     aufgebot_days_before: int = 7  # ab wie vielen Tagen vor dem Spiel darf der Trainer aufbieten

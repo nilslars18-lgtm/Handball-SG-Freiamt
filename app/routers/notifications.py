@@ -40,22 +40,33 @@ def notification_count(
         .count()
     )
 
-    # Bussenchef/Admin: offene Beschwerden, die sie bearbeiten muessen
-    # (eigene Beschwerden zaehlen nicht - die kann man nicht selbst entscheiden,
-    # ausser als Admin)
-    complaints_open = 0
-    is_admin = current_user.base_role == models.BaseRole.ADMIN
-    if is_admin or current_user.is_bussenchef:
-        q = db.query(models.Complaint).filter(
-            models.Complaint.status == models.ComplaintStatus.OFFEN
+    # Spielberichte, die ich schreiben muss (Spiel schon gespielt, noch nicht fertig)
+    reports_open = (
+        db.query(models.GameReport)
+        .join(models.Game, models.Game.id == models.GameReport.game_id)
+        .filter(
+            models.GameReport.writer_id == current_user.id,
+            models.GameReport.is_done == False,  # noqa: E712
+            models.Game.start_time < now,
         )
-        if not is_admin:
-            q = q.filter(models.Complaint.user_id != current_user.id)
-        complaints_open = q.count()
+        .count()
+    )
+
+    # Bussenchef/Admin: offene Beschwerden; Admin: ungelesenes Feedback
+    from app.routers.complaints import open_complaint_count
+    from app.routers.feedback import unread_count
+
+    is_admin = current_user.is_trainer
+    complaints_open = open_complaint_count(db) if (is_admin or current_user.is_bussenchef) else 0
+    feedback_unread = unread_count(db) if current_user.base_role == models.BaseRole.ADMIN else 0
+    from app.routers.events import open_notice_count
+    notices_open = open_notice_count(db, current_user.id)
+    from app.routers.activity import unread_count as responses_unread_count
+    responses_unread = responses_unread_count(db) if is_admin else 0
 
     return schemas.NotificationCount(
-        polls_open=polls_open,
-        fines_open=fines_open,
-        complaints_open=complaints_open,
-        total=polls_open + fines_open + complaints_open,
+        polls_open=polls_open, fines_open=fines_open, reports_open=reports_open,
+        complaints_open=complaints_open, feedback_unread=feedback_unread, notices_open=notices_open,
+        responses_unread=responses_unread,
+        total=polls_open + fines_open + reports_open + complaints_open + feedback_unread + notices_open + responses_unread,
     )

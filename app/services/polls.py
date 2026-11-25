@@ -66,3 +66,20 @@ def results_visible(game: models.Game, now: datetime) -> bool:
     if end is None:
         end = game.start_time + timedelta(minutes=settings.game_default_duration_minutes)
     return now >= end
+
+
+def poll_summary(db: Session, poll: models.EssenPoll) -> dict:
+    """Auswertung: Stimmen pro Option, Gewinner (ohne 'komme nicht mit'), wer mitkommt."""
+    skip = settings.poll_skip_option.strip().casefold()
+    votes = db.query(models.PollVote).filter(models.PollVote.poll_id == poll.id).all()
+    label = {o.id: o.label for o in poll.options}
+    counts = {}
+    for v in votes:
+        counts[label.get(v.option_id, "?")] = counts.get(label.get(v.option_id, "?"), 0) + 1
+    food = {k: c for k, c in counts.items() if k.strip().casefold() != skip}
+    top = max(food.values()) if food else 0
+    winners = [k for k, c in food.items() if c == top and top > 0]
+    come_ids = {v.user_id for v in votes if label.get(v.option_id, "").strip().casefold() != skip}
+    names = sorted(u.name for u in db.query(models.User).filter(models.User.id.in_(come_ids)).all()) if come_ids else []
+    voted = {v.user_id for v in votes}
+    return {"counts": counts, "winners": winners, "winner_votes": top, "mitkommende": names, "voted_ids": voted}

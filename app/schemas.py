@@ -21,11 +21,13 @@ class UserUpdateAddress(BaseModel):
 class UserOut(BaseModel):
     id: int
     name: str
-    email: EmailStr
+    email: str  # str statt EmailStr: der Admin-Login heisst einfach "admin"
     base_role: BaseRole
     is_captain: bool
     is_bussenchef: bool
     is_harzchef: bool
+    staff_title: Optional[str] = None
+    is_trainer: bool = False
     address_street: Optional[str] = None
     address_zip: Optional[str] = None
     address_city: Optional[str] = None
@@ -221,10 +223,6 @@ class FineOut(BaseModel):
     amount: float
     date: datetime
     status: str  # "offen" | "bezahlt"
-    # Nur bei /fines/me und /fines/player/{id} befuellt:
-    is_complaint_fee: bool = False          # ist selbst eine Beschwerdegebuehr
-    complaint_id: Optional[int] = None      # Beschwerde zu dieser Busse (falls vorhanden)
-    complaint_status: Optional[str] = None  # "offen" | "abgelehnt" (angenommene Busse existiert nicht mehr)
 
     class Config:
         from_attributes = True
@@ -275,57 +273,9 @@ class NextGameOut(BaseModel):
 class NotificationCount(BaseModel):
     polls_open: int
     fines_open: int
-    complaints_open: int = 0  # nur fuer Bussenchef/Admin: zu bearbeitende Beschwerden
+    reports_open: int = 0
+    complaints_open: int = 0
+    feedback_unread: int = 0
+    notices_open: int = 0
+    responses_unread: int = 0
     total: int
-
-
-# ---------------------------------------------------------------------------
-# Beschwerden gegen Bussen
-# ---------------------------------------------------------------------------
-class ComplaintCreate(BaseModel):
-    fine_id: int
-    message: str
-
-
-class ComplaintDecision(BaseModel):
-    decision: str  # "annehmen" | "ablehnen"
-    comment: Optional[str] = None
-
-
-class ComplaintComment(BaseModel):
-    comment: str
-
-
-class ComplaintOut(BaseModel):
-    id: int
-    user_id: int
-    player_name: str
-    fine_id: Optional[int] = None  # None, sobald die Busse (nach Annahme) geloescht wurde
-    fine_reason: str
-    fine_amount: float
-    fine_date: Optional[datetime] = None
-    fee_amount: float
-    message: str
-    status: str  # "offen" | "angenommen" | "abgelehnt"
-    decision_comment: Optional[str] = None
-    decided_by_name: Optional[str] = None
-    created_at: datetime
-    decided_at: Optional[datetime] = None
-
-
-# ---------------------------------------------------------------------------
-# App-Feedback
-# ---------------------------------------------------------------------------
-class FeedbackCreate(BaseModel):
-    category: str
-    message: str
-
-
-class FeedbackOut(BaseModel):
-    id: int
-    user_id: int
-    player_name: str
-    category: str
-    message: str
-    is_done: bool
-    created_at: datetime

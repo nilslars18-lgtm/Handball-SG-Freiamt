@@ -19,52 +19,6 @@ def _totals(db: Session) -> tuple[float, float, float]:
     return total_offen, total_bezahlt, kassenstand
 
 
-def _pending_complaint_for(db: Session, fine_id: int):
-    """Offene Beschwerde, die diese Busse betrifft (als angefochtene Busse oder
-    als Beschwerdegebuehr) - solange sie offen ist, darf nichts bezahlt werden."""
-    return (
-        db.query(models.Complaint)
-        .filter(
-            models.Complaint.status == models.ComplaintStatus.OFFEN,
-            (models.Complaint.fine_id == fine_id) | (models.Complaint.fee_fine_id == fine_id),
-        )
-        .first()
-    )
-
-
-def _fine_outs_with_complaints(db: Session, fines: list, player_names: dict) -> list:
-    """FineOut inkl. Beschwerde-Infos (is_complaint_fee, complaint_status)."""
-    ids = [f.id for f in fines]
-    by_fine: dict[int, models.Complaint] = {}
-    fee_ids: set[int] = set()
-    if ids:
-        for c in db.query(models.Complaint).filter(
-            (models.Complaint.fine_id.in_(ids)) | (models.Complaint.fee_fine_id.in_(ids))
-        ):
-            if c.fine_id is not None:
-                by_fine[c.fine_id] = c
-            if c.fee_fine_id is not None:
-                fee_ids.add(c.fee_fine_id)
-    out = []
-    for f in fines:
-        c = by_fine.get(f.id)
-        out.append(
-            schemas.FineOut(
-                id=f.id,
-                user_id=f.user_id,
-                player_name=player_names[f.user_id],
-                reason=f.reason,
-                amount=f.amount,
-                date=f.date,
-                status=f.status.value,
-                is_complaint_fee=f.id in fee_ids,
-                complaint_id=c.id if c else None,
-                complaint_status=c.status.value if c else None,
-            )
-        )
-    return out
-
-
 # ---------------------------------------------------------------------------
 # Feature 6: Bussenliste
 # ---------------------------------------------------------------------------
@@ -87,6 +41,9 @@ def create_fine(
     db.add(fine)
     db.commit()
     db.refresh(fine)
+    from app.services import webpush
+    webpush.notify([player.id], f"💰 Neue Busse: CHF {body.amount:.2f}", f"{body.reason} – Details unter Mehr → Meine Bussen",
+                   "/?open=tile:einstellungen", "bussen", f"busse-{fine.id}")
     return schemas.FineOut(
         id=fine.id,
         user_id=fine.user_id,
@@ -107,11 +64,6 @@ def mark_fine_paid(
     fine = db.query(models.Fine).filter(models.Fine.id == fine_id).first()
     if not fine:
         raise HTTPException(status_code=404, detail="Busse nicht gefunden")
-    if _pending_complaint_for(db, fine.id):
-        raise HTTPException(
-            status_code=400,
-            detail="Zu dieser Busse gibt es eine offene Beschwerde - bitte zuerst die Beschwerde entscheiden",
-        )
     fine.status = models.BussenStatus.BEZAHLT
     db.commit()
     db.refresh(fine)
@@ -159,13 +111,19 @@ def update_fine(
 def my_fines(
     db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)
 ):
-    fines = (
-        db.query(models.Fine)
-        .filter(models.Fine.user_id == current_user.id)
-        .order_by(models.Fine.date.desc())
-        .all()
-    )
-    return _fine_outs_with_complaints(db, fines, {current_user.id: current_user.name})
+    fines = db.query(models.Fine).filter(models.Fine.user_id == current_user.id).all()
+    return [
+        schemas.FineOut(
+            id=f.id,
+            user_id=f.user_id,
+            player_name=current_user.name,
+            reason=f.reason,
+            amount=f.amount,
+            date=f.date,
+            status=f.status.value,
+        )
+        for f in fines
+    ]
 
 
 @router.get("/fines", response_model=List[schemas.FineOut])
@@ -206,7 +164,11 @@ def fines_by_player(
 ):
     """Uebersicht pro Spieler: offener und insgesamt bezahlter Betrag.
     Zeigt auch Spieler ohne jede Busse (mit 0.0/0.0)."""
-    players = db.query(models.User).filter(models.User.is_active == True).all()  # noqa: E712
+    players = (
+        db.query(models.User)
+        .filter(models.User.is_active == True, models.User.email != "admin")  # noqa: E712
+        .all()
+    )  # der technische "admin"-Login ist kein Spieler
     fines = db.query(models.Fine).all()
 
     offen_by_user: dict[int, float] = {}
@@ -245,7 +207,18 @@ def fines_for_player(
         .order_by(models.Fine.date.desc())
         .all()
     )
-    return _fine_outs_with_complaints(db, fines, {player.id: player.name})
+    return [
+        schemas.FineOut(
+            id=f.id,
+            user_id=f.user_id,
+            player_name=player.name,
+            reason=f.reason,
+            amount=f.amount,
+            date=f.date,
+            status=f.status.value,
+        )
+        for f in fines
+    ]
 
 
 # ---------------------------------------------------------------------------

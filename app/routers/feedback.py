@@ -1,82 +1,103 @@
-from typing import List
-
+"""Feedback-Knopf: alle koennen Feedback senden, der Admin wertet es aus."""
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app import models, schemas
+from app import models
 from app.database import get_db
-from app.deps import get_current_user, require_admin
+from app.deps import get_current_user, require_owner
 
 router = APIRouter(prefix="/feedback", tags=["feedback"])
 
-CATEGORIES = [
-    "Allgemein",
-    "Spiele & Kalender",
-    "Aufgebot",
-    "Anfahrt",
-    "Essen-Umfrage",
-    "Bussen",
-    "Harz",
-    "Design & Bedienung",
-    "Fehler melden",
-    "Sonstiges",
-]
-MAX_MESSAGE_LEN = 3000
+CATEGORIES = {
+    "fehler": "🐞 Fehler",
+    "idee": "💡 Idee / Wunsch",
+    "aenderung": "🔧 Änderung",
+    "lob": "👍 Lob",
+    "sonstiges": "💬 Sonstiges",
+    "abschluss": "🎉 Saisonabschluss",  # Vorschlaege fuer den Abschluss
+}
 
 
-def _out(f: models.Feedback) -> schemas.FeedbackOut:
-    return schemas.FeedbackOut(
-        id=f.id,
-        user_id=f.user_id,
-        player_name=f.player.name,
-        category=f.category,
-        message=f.message,
-        is_done=bool(f.is_done),
-        created_at=f.created_at,
-    )
+class FeedbackIn(BaseModel):
+    category: str
+    text: str
 
 
-@router.get("/categories", response_model=List[str])
-def list_categories(current_user: models.User = Depends(get_current_user)):
-    return CATEGORIES
+@router.get("/categories")
+def categories(user=Depends(get_current_user)):
+    return [{"id": k, "label": v} for k, v in CATEGORIES.items()]
 
 
 @router.post("")
-def create_feedback(
-    body: schemas.FeedbackCreate,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
-):
+def send_feedback(body: FeedbackIn, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
     if body.category not in CATEGORIES:
-        raise HTTPException(status_code=400, detail="Unbekannte Kategorie")
-    message = (body.message or "").strip()
-    if not message:
-        raise HTTPException(status_code=400, detail="Bitte eine Nachricht eingeben")
-    if len(message) > MAX_MESSAGE_LEN:
-        raise HTTPException(status_code=400, detail="Nachricht ist zu lang")
-    db.add(models.Feedback(user_id=current_user.id, category=body.category, message=message))
+        raise HTTPException(400, "Unbekannte Kategorie")
+    if not body.text.strip():
+        raise HTTPException(400, "Bitte etwas schreiben")
+    fb = models.Feedback(user_id=user.id, category=body.category, text=body.text.strip()[:4000])
+    db.add(fb)
     db.commit()
-    return {"message": "Danke für dein Feedback!"}
+    return {"ok": True}
 
 
-@router.get("", response_model=List[schemas.FeedbackOut])
-def list_feedback(db: Session = Depends(get_db), admin: models.User = Depends(require_admin)):
-    """Nur Admin: alle Rueckmeldungen, offene zuerst, neueste oben."""
-    items = db.query(models.Feedback).order_by(models.Feedback.created_at.desc()).all()
-    items.sort(key=lambda f: 1 if f.is_done else 0)
-    return [_out(f) for f in items]
+@router.get("/mine")
+def my_feedback(category: str = "", db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
+    """Eigene Eintraege (z.B. 'Deine Vorschlaege'). Namen anderer sieht nur der Admin."""
+    q = db.query(models.Feedback).filter(models.Feedback.user_id == user.id)
+    if category:
+        q = q.filter(models.Feedback.category == category)
+    return [
+        {"id": f.id, "category": f.category, "text": f.text, "created_at": f.created_at}
+        for f in q.order_by(models.Feedback.created_at.desc()).all()
+    ]
 
 
-@router.patch("/{feedback_id}/done", response_model=schemas.FeedbackOut)
-def toggle_done(
-    feedback_id: int,
-    db: Session = Depends(get_db),
-    admin: models.User = Depends(require_admin),
-):
-    f = db.query(models.Feedback).filter(models.Feedback.id == feedback_id).first()
+@router.delete("/mine/{feedback_id}")
+def delete_my_feedback(feedback_id: int, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
+    f = db.get(models.Feedback, feedback_id)
+    if not f or f.user_id != user.id:
+        raise HTTPException(404, "Nicht gefunden")
+    db.delete(f)
+    db.commit()
+    return {"ok": True}
+
+
+@router.get("")
+def list_feedback(db: Session = Depends(get_db), admin=Depends(require_owner)):
+    rows = db.query(models.Feedback).order_by(models.Feedback.created_at.desc()).all()
+    return [
+        {
+            "id": f.id,
+            "category": f.category,
+            "category_label": CATEGORIES.get(f.category, f.category),
+            "text": f.text,
+            "user_name": f.user.name if f.user else "",
+            "is_read": f.is_read,
+            "created_at": f.created_at,
+        }
+        for f in rows
+    ]
+
+
+@router.patch("/{feedback_id}/read")
+def mark_read(feedback_id: int, db: Session = Depends(get_db), admin=Depends(require_owner)):
+    f = db.get(models.Feedback, feedback_id)
     if not f:
-        raise HTTPException(status_code=404, detail="Feedback nicht gefunden")
-    f.is_done = not bool(f.is_done)
+        raise HTTPException(404, "Nicht gefunden")
+    f.is_read = not f.is_read
     db.commit()
-    db.refresh(f)
-    return _out(f)
+    return {"ok": True, "is_read": f.is_read}
+
+
+@router.delete("/{feedback_id}")
+def delete_feedback(feedback_id: int, db: Session = Depends(get_db), admin=Depends(require_owner)):
+    f = db.get(models.Feedback, feedback_id)
+    if f:
+        db.delete(f)
+        db.commit()
+    return {"ok": True}
+
+
+def unread_count(db: Session) -> int:
+    return db.query(models.Feedback).filter(models.Feedback.is_read == False).count()  # noqa: E712

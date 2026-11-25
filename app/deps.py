@@ -27,30 +27,38 @@ def get_current_user(
 
 
 def require_admin(user: models.User = Depends(get_current_user)) -> models.User:
-    if user.base_role != models.BaseRole.ADMIN:
+    """Admin ODER Trainer (Staff)."""
+    if not user.is_trainer:
         raise HTTPException(status_code=403, detail="Nur für Admin/Trainer")
     return user
 
 
+def require_owner(user: models.User = Depends(get_current_user)) -> models.User:
+    """Nur der Admin-Login: Passwoerter, Login-Liste, Rollen."""
+    if user.base_role != models.BaseRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Nur für den Admin")
+    return user
+
+
 def require_captain_or_admin(user: models.User = Depends(get_current_user)) -> models.User:
-    if user.base_role != models.BaseRole.ADMIN and not user.is_captain:
+    if not user.is_trainer and not user.is_captain:
         raise HTTPException(status_code=403, detail="Nur für Captain oder Admin/Trainer")
     return user
 
 
 def require_bussenchef(user: models.User = Depends(get_current_user)) -> models.User:
-    if user.base_role != models.BaseRole.ADMIN and not user.is_bussenchef:
+    if not user.is_trainer and not user.is_bussenchef:
         raise HTTPException(status_code=403, detail="Nur für Bussenchef")
     return user
 
 
 def require_harzchef(user: models.User = Depends(get_current_user)) -> models.User:
-    if user.base_role != models.BaseRole.ADMIN and not user.is_harzchef:
+    if not user.is_trainer and not user.is_harzchef:
         raise HTTPException(status_code=403, detail="Nur für Harzchef")
     return user
 
 
 def require_bussenchef_or_harzchef(user: models.User = Depends(get_current_user)) -> models.User:
-    if user.base_role != models.BaseRole.ADMIN and not user.is_bussenchef and not user.is_harzchef:
+    if not user.is_trainer and not user.is_bussenchef and not user.is_harzchef:
         raise HTTPException(status_code=403, detail="Nur für Bussenchef oder Harzchef")
     return user

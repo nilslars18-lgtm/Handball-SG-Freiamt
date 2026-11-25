@@ -4,6 +4,26 @@ Login/Rollen, Kalender-Import, Aufgebot, Anfahrt, Essen-Umfrage,
 Restaurantvorschläge, Bussenliste und Harz-Kasse sind gebaut und (bis auf
 die beiden Google-API-Features, siehe unten) getestet.
 
+## Neu: Dokumente, Fotos & Videos, Spielberichte
+
+Auf der Startseite gibt es drei Kacheln:
+
+- **📁 Dokumente** – Ordnerstruktur (Vorlagen, Verein, Team). Alle können
+  ansehen/herunterladen, Trainer und Captain können Ordner anlegen, Dateien
+  hochladen (max. 10 MB) und Info-Texte schreiben. Im Ordner „Vorlagen“
+  liegt automatisch die Spielbericht-Vorlage (Word).
+- **📸 Fotos & Videos** – Links (Google Drive, iCloud, YouTube …) einfügen
+  und einem Spiel zuordnen. Es werden nur Links gespeichert.
+- **📝 Spielberichte** – wer schreibt, wird automatisch reihum unter den
+  aufgebotenen Spielern bestimmt (wer am wenigsten Berichte hat, ist dran).
+  Neue/gelöschte Spieler werden automatisch berücksichtigt; der Trainer kann
+  einen Schreiber auch fix setzen. Im Assistenten: Spiel wählen → Resultat →
+  Teamfoto → Statistik → fertige Word-Datei, nur noch Text schreiben.
+
+Dateien und Fotos liegen direkt in der Datenbank (Neon), weil Render Free
+hochgeladene Dateien beim Einschlafen löscht. Fotos werden beim Hochladen
+automatisch auf ca. 1600 px verkleinert.
+
 ## 24/7 online: Deployment auf Render + Neon (kostenlos)
 
 Für den Dauerbetrieb (App über einen Link erreichbar, ohne dass dein PC
@@ -282,25 +302,16 @@ aufbieten, bei der Essen-Umfrage abstimmen, eine Busse eintragen. Sag mir,
 was gut funktioniert und wo etwas hakt oder anders sein soll — dann
 schleife ich das direkt ein.
 
-## Beschwerden gegen Bussen & Feedback
+## App-Installation, Push-Benachrichtigungen, Kalender-Abo
 
-**Bussen-Tab für alle:** Jeder sieht dort sein eigenes Bussenkonto (offen/bezahlt). Normale Spieler sehen nur ihre eigenen Bussen.
-
-**Beschwerde:** Bei einer eigenen offenen Busse auf «Beschwerde» tippen und begründen. Sofort wird eine Beschwerdegebühr
-(Standard CHF 5, einstellbar mit `COMPLAINT_FEE`) als zusätzliche offene Busse gebucht. Der Bussenchef/Admin bekommt eine
-Benachrichtigung (blinkende Zahl), liest die Begründung und schreibt einen Kommentar:
-- **Ablehnen:** Busse und Gebühr bleiben bestehen.
-- **Annehmen:** Busse und Gebühr werden automatisch gelöscht.
-Der Kommentar kann jederzeit nachträglich ergänzt werden. Solange eine Beschwerde offen ist, kann die Busse nicht als bezahlt markiert werden.
-Sichtbar ist eine Beschwerde nur für den Verfasser, den Bussenchef und den Admin. Eigene Beschwerden eines Bussenchefs entscheidet der Admin.
-
-**Feedback:** Button «💬 Feedback» oben rechts, mit Kategorie (Allgemein, Spiele & Kalender, Aufgebot, Anfahrt, Essen-Umfrage, Bussen, Harz, Design & Bedienung, Fehler melden, Sonstiges).
-Der Admin sieht alles unter «🔧 Mehr» und kann es als erledigt markieren.
-
-## Alternative: Hosting auf Vercel (gratis, kein Einschlafen)
-
-Dateien dafür: `api/index.py`, `vercel.json`, `.vercelignore`. Render (`render.yaml`, `Procfile`) bleibt unverändert nutzbar.
-1. Auf vercel.com mit GitHub anmelden → **Add New → Project** → Repository «Handball-App» importieren.
-2. **Root Directory** auf den Ordner mit `vercel.json` stellen (bei uns `handball-app 5.1/handball-app`). Framework: «Other».
-3. Unter **Environment Variables** eintragen: `SECRET_KEY`, `DATABASE_URL` (gleiche gepoolte Neon-Adresse wie bei Render), optional `GOOGLE_MAPS_API_KEY`.
-4. **Deploy**. Danach die `.vercel.app`-Adresse öffnen und mit dem bisherigen Admin-Login einloggen (die Daten liegen weiter in Neon).
+- **Als App installieren (PWA):** `/manifest.webmanifest`, Service Worker `/sw.js`, Icons in `app/static/`.
+  iPhone: Safari → Teilen → Zum Home-Bildschirm. Android: Chrome → ⋮ → App installieren.
+- **Push:** eigene Web-Push-Umsetzung (`app/services/webpush.py`, RFC 8291/8292, nur `cryptography`).
+  Die VAPID-Schlüssel werden beim ersten Start erzeugt und in `app_assets` (Key `vapid_private`) gespeichert.
+  Optional per Umgebungsvariable `VAPID_PRIVATE_PEM` vorgeben. Auf dem iPhone geht Push nur aus der installierten App (iOS 16.4+).
+  - Sofort: Aufgebot, neuer/verschobener/abgesagter Termin, neue Trainingszeiten, Erinnerung vom Trainer,
+    neue Busse, Beschwerde entschieden; Admin: Ab-/Verletztmeldungen.
+  - Automatisch alle 10 Min. (`app/services/push_jobs.py`, nicht zwischen 21:30 und 07:00):
+    Ämtli am Vortag, „Bitte eintragen“ ca. 30 Std. vor dem Termin, Spielbericht vor/nach dem Spiel. Jede Meldung nur einmal.
+  - Jeder Spieler kann unter Mehr → Benachrichtigungen einzelne Arten ausschalten. Abschalten der Jobs: `PUSH_JOBS=false`.
+- **Kalender-Abo:** persönlicher Link `/cal/<token>.ics` (Mehr → Termine im Handy-Kalender), mit Aufgebot, Ämtli und Antwort.

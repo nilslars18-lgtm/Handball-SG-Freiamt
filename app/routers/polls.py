@@ -1,5 +1,5 @@
 from collections import Counter
-from datetime import datetime
+
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -9,7 +9,7 @@ from app import models, schemas
 from app.config import settings
 from app.database import get_db
 from app.deps import get_current_user
-from app.services.places import search_open_restaurants
+from app.services.agenda import now_local
 from app.services.polls import poll_status, results_visible
 
 router = APIRouter(prefix="/games/{game_id}/poll", tags=["essen-umfrage"])
@@ -42,7 +42,7 @@ def cast_vote(
     current_user: models.User = Depends(get_current_user),
 ):
     game, poll = _get_poll(db, game_id)
-    now = datetime.utcnow()
+    now = now_local()
     status = poll_status(poll, now)
     if status != "offen":
         raise HTTPException(
@@ -88,7 +88,7 @@ def get_results(
     current_user: models.User = Depends(get_current_user),
 ):
     game, poll = _get_poll(db, game_id)
-    now = datetime.utcnow()
+    now = now_local()
 
     if not results_visible(game, now):
         raise HTTPException(
@@ -127,60 +127,27 @@ def get_results(
 
 
 @router.get("/restaurants", response_model=schemas.RestaurantSuggestionsOut)
-async def get_restaurant_suggestions(
+def get_restaurant_suggestions(
     game_id: int,
+    refresh: bool = False,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
+    """Restaurants zur Gewinner-Kueche in der Naehe der Halle (Google mit Key, sonst OpenStreetMap).
+    Sichtbar ab Umfrage-Schluss (Admin/Captain zum Reservieren) bzw. fuer alle nach dem Spiel."""
     game, poll = _get_poll(db, game_id)
-    now = datetime.utcnow()
-
-    if not results_visible(game, now):
-        raise HTTPException(
-            status_code=403,
-            detail="Restaurantvorschläge sind erst nach dem Spiel verfügbar",
-        )
-
-    votes = db.query(models.PollVote).filter(models.PollVote.poll_id == poll.id).all()
-    counts = Counter(v.option_id for v in votes)
-    skip_option_ids = {o.id for o in poll.options if o.label.strip().casefold() == settings.poll_skip_option.strip().casefold()}
-
-    relevant_counts = {oid: c for oid, c in counts.items() if oid not in skip_option_ids}
-    if not relevant_counts:
-        return schemas.RestaurantSuggestionsOut(
-            based_on_options=[], suggestions=[], note="Noch keine Stimmen (ausser 'komme nicht mit')."
-        )
-
-    max_count = max(relevant_counts.values())
-    winning_option_ids = [oid for oid, c in relevant_counts.items() if c == max_count]
-    label_by_id = {o.id: o.label for o in poll.options}
-    winning_labels = [label_by_id[oid] for oid in winning_option_ids]
-
-    near = game.resolved_address or game.location_name or ""
-    if not near:
-        return schemas.RestaurantSuggestionsOut(
-            based_on_options=winning_labels,
-            suggestions=[],
-            note="Keine Hallen-Adresse bekannt - Vorschläge nicht möglich.",
-        )
-    if not settings.google_maps_api_key:
-        return schemas.RestaurantSuggestionsOut(
-            based_on_options=winning_labels,
-            suggestions=[],
-            note="Kein GOOGLE_MAPS_API_KEY konfiguriert - Restaurantvorschläge nicht verfügbar.",
-        )
-
-    suggestions: list[schemas.RestaurantSuggestion] = []
-    for label in winning_labels:
-        found = await search_open_restaurants(label, near, limit=3 if len(winning_labels) == 1 else 2)
-        for f in found:
-            dest = f.get("address") or f.get("name")
-            suggestions.append(
-                schemas.RestaurantSuggestion(
-                    name=f["name"],
-                    address=f.get("address"),
-                    maps_link=f"https://www.google.com/maps/dir/?api=1&destination={dest}",
-                )
-            )
-
-    return schemas.RestaurantSuggestionsOut(based_on_options=winning_labels, suggestions=suggestions[:3])
+    now = now_local()
+    early = poll_status(poll, now) == "geschlossen" and (current_user.is_trainer or current_user.is_captain)
+    if not results_visible(game, now) and not early:
+        raise HTTPException(status_code=403, detail="Restaurantvorschläge sind erst nach dem Spiel verfügbar")
+    from app.services.food_jobs import suggestions_for
+    data = suggestions_for(db, game, poll, force=refresh)
+    if not data["winners"]:
+        return schemas.RestaurantSuggestionsOut(based_on_options=[], suggestions=[],
+                                                note="Noch keine Stimmen (ausser 'komme nicht mit').")
+    sug = [schemas.RestaurantSuggestion(
+        name=r["name"] + (f" ⭐{r['rating']}" if r.get("rating") else ""),
+        address=" · ".join(x for x in [r.get("address"), f"{r['distance_km']} km von der Halle" if r.get("distance_km") is not None else None] if x) or None,
+        maps_link=r["maps_link"]) for r in data["restaurants"]]
+    note = None if sug else ("Keine Hallen-Adresse bekannt." if not data["near"] else "Keine passenden Restaurants gefunden.")
+    return schemas.RestaurantSuggestionsOut(based_on_options=data["winners"], suggestions=sug, note=note)

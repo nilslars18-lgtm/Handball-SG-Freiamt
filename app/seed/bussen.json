@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "note": "Uebernommen aus der bisherigen Bussen-App (Stand 16.10.2026). Wird beim Start genau einmal eingespielt.",
+  "catalog": [
+    {"name": "Rot Motze", "amount": 50, "category": "Spiel"},
+    {"name": "Matchdress vergessen", "amount": 50, "category": "Spiel"},
+    {"name": "2min Motze", "amount": 25, "category": "Spiel"},
+    {"name": "Zu spät Match", "amount": 20, "category": "Spiel"},
+    {"name": "Kameradenschwein", "amount": 20, "category": "Allgemein"},
+    {"name": "Ämtli vergessen", "amount": 20, "category": "Allgemein"},
+    {"name": "Nicht abgemeldet", "amount": 15, "category": "Allgemein"},
+    {"name": "Zu spät Training", "amount": 10, "category": "Training"},
+    {"name": "Gump nicht ausgefüllt", "amount": 5, "category": "Allgemein"},
+    {"name": "Etwas vergessen", "amount": 5, "category": "Allgemein"},
+    {"name": "Pro Trainingsstück vergessen", "amount": 5, "category": "Training"},
+    {"name": "Dummheitsbusse", "amount": 2, "category": "Allgemein"}
+  ],
+  "players": [
+    {"name": "Nevio Mayer"}, {"name": "Raphael Vogel"}, {"name": "Andreas Kohlreiter"}, {"name": "Yannic Bunzel"},
+    {"name": "Marwin Hartig"}, {"name": "Flurin Frey"}, {"name": "Max Berger"}, {"name": "Nahuel Cadosch"},
+    {"name": "Nils Köhle"}, {"name": "Loris Scherer"}, {"name": "Tibor Taeymans"}, {"name": "Petar Paponja"},
+    {"name": "Levin Degiampietro"}, {"name": "Lino Stierli"}, {"name": "Jan Kohlreiter"}, {"name": "Alex Fleischlin"},
+    {"name": "Timo Schneider"}, {"name": "Jonas Hunziker"}, {"name": "Andrin Meyer"}, {"name": "Luca Franconi"}
+  ],
+  "fines": [
+    {"name": "Nevio Mayer", "reason": "Nicht abgemeldet", "amount": 15, "date": "2026-08-18", "paid": true},
+    {"name": "Nevio Mayer", "reason": "Nicht abgemeldet", "amount": 15, "date": "2026-08-25", "paid": true},
+    {"name": "Raphael Vogel", "reason": "Ämtli vergessen", "amount": 20, "date": "2026-08-06"},
+    {"name": "Raphael Vogel", "reason": "Pro Trainingsstück vergessen", "amount": 5, "date": "2026-08-14"},
+    {"name": "Raphael Vogel", "reason": "Etwas vergessen", "amount": 5, "date": "2026-08-25"},
+    {"name": "Andreas Kohlreiter", "reason": "Nicht abgemeldet", "amount": 15, "date": "2026-08-06", "paid": true},
+    {"name": "Yannic Bunzel", "reason": "Nicht abgemeldet", "amount": 15, "date": "2026-07-28"},
+    {"name": "Marwin Hartig", "reason": "Nicht abgemeldet", "amount": 15, "date": "2026-08-18"},
+    {"name": "Flurin Frey", "reason": "Zu spät Training", "amount": 10, "date": "2026-09-22", "paid": true},
+    {"name": "Max Berger", "reason": "Pro Trainingsstück vergessen", "amount": 5, "date": "2026-09-03"},
+    {"name": "Nahuel Cadosch", "reason": "Etwas vergessen", "amount": 5, "date": "2026-09-13"}
+  ]
+}
